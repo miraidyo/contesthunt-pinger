@@ -1,0 +1,35 @@
+name: Keep Render API Alive
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'  # every 14 minutes
+  workflow_dispatch:        # allows manual trigger
+
+jobs:
+  ping-api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pinging ContestHunt Render API
+        id: ping
+        run: |
+          echo "Starting API ping to https://contesthunt-api.onrender.com/"
+          
+          # Try 3 times with 5-second delay between attempts
+          for i in {1..3}; do
+            echo "Attempt $i..."
+            response=$(curl -s -o response.txt -w "%{http_code}" https://contesthunt-api.onrender.com/)
+            cat response.txt  # print response body
+            echo "Status Code: $response"
+
+            if [ "$response" -eq 200 ]; then
+              echo "✅ Ping successful."
+              exit 0
+            else
+              echo "❌ Ping failed (Status: $response). Retrying in 5s..."
+              sleep 5
+            fi
+          done
+
+          echo "🚨 All attempts failed. API might be down."
+          exit 1  # This marks the workflow as failed and triggers an alert
